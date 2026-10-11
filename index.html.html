@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f3ec">
+<title>百人一首ノート</title>
+<style>
+:root{color-scheme:light;--ink:#292820;--paper:#fbf9f3;--line:#d8d2c5;--muted:#777466;--accent:#536b58}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+header{padding:20px 16px 12px;text-align:center}h1{font-size:22px;margin:0 0 5px}header p{margin:0;color:var(--muted);font-size:12px}
+nav{display:flex;gap:8px;padding:0 12px 12px;max-width:720px;margin:auto}
+button,select{font:inherit}button{border:1px solid var(--line);background:white;color:var(--ink);border-radius:12px;padding:11px 13px;cursor:pointer}button:active{transform:scale(.985)}
+.navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px}.navbtn .symbol{font-size:22px;line-height:1}
+main{max-width:720px;margin:auto;padding:0 12px 32px}.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}.toolbar label{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}select{border:1px solid var(--line);border-radius:9px;background:white;padding:8px;color:var(--ink)}
+.count{font-size:12px;color:var(--muted);margin:10px 2px}.poem{border:1px solid var(--line);background:#fffefa;border-radius:14px;padding:14px;margin:10px 0;cursor:pointer}.poemhead{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:10px}.verse{font-size:17px;line-height:1.9;letter-spacing:.025em}.verse strong{font-weight:800;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}.lower{margin-top:7px}.hidden{display:none!important}.flipnote{font-size:11px;color:var(--muted);margin-top:8px}
+.panel{border:1px solid var(--line);background:#fffefa;border-radius:16px;padding:18px;margin-top:12px}.small{font-size:12px;color:var(--muted)}.gameverse{font-size:22px;line-height:1.8;margin:14px 0}.answer{font-size:24px;font-weight:800;color:var(--accent);margin-top:0;line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:120px}.primary{background:var(--accent);color:white;border-color:var(--accent)}.timer{font-variant-numeric:tabular-nums;font-size:36px;font-weight:750;letter-spacing:.04em;margin:8px 0 14px}.status{display:inline-block;border-radius:999px;background:#eeece3;padding:5px 9px;font-size:11px;color:var(--muted)}.empty{font-size:13px;color:var(--muted);padding:8px 0}
+@media(min-width:560px){.verse{font-size:19px}.gameverse{font-size:26px}}
+</style>
+</head>
+<body>
+<header><h1>百人一首ノート</h1><p>単語帳と札流し</p></header>
+<nav>
+<button class="navbtn" id="bookTab"><span class="symbol">☰</span><span>単語帳</span></button>
+<button class="navbtn" id="gameTab"><span class="symbol">□</span><span>札流し</span></button>
+</nav>
+<main>
+<section id="bookSection">
+<div class="toolbar">
+<label>順番 <select id="order"><option value="normal">通常順</option><option value="kimariji">むすめふさほせ順</option></select></label>
+<label>表示 <select id="display"><option value="flip">タップでめくる</option><option value="all">全表示</option></select></label>
+</div>
+<div class="count" id="bookCount"></div>
+<div id="poemList"></div>
+</section>
+<section id="gameSection" class="hidden">
+<div class="panel">
+<div class="poemhead"><span id="progress">札流し・100首</span><span class="status" id="gameStatus">待機中</span></div>
+<div class="gameverse" id="question">「計測スタート」を押して始めよう</div>
+<div class="answer" id="previousAnswer"></div>
+<div class="actions">
+<button class="primary" id="nextBtn">次へ</button>
+<button id="restartBtn">最初から</button>
+</div>
+<p class="small">次へを押すと次の札が出て、直下にひとつ前の札の決まり字が表示されるよ。</p>
+</div>
+<div class="panel">
+<div class="small">経過時間</div>
+<div class="timer" id="timer">00:00.0</div>
+<div class="actions">
+<button class="primary" id="startBtn">計測スタート</button>
+<button id="stopBtn">終了</button>
+</div>
+</div>
+</section>
+</main>
+<script>
+const poems = [
+[1,"あきの","あきのたのかりほのいほのとまをあらみ","わがころもではつゆにぬれつつ","あきのた"],
+[2,"はるす","はるすぎてなつきにけらししろたへの","ころもほすてふあまのかぐやま","はるす"],
+[3,"あし","あしびきのやまどりのおのしだりおの","ながながしよをひとりかもねむ","あしびきの"],
+[4,"たご","たごのうらにうちいでてみればしろたへの","ふじのたかねにゆきはふりつつ","たごのうらに"],
+[5,"おく","おくやまにもみぢふみわけなくしかの","こゑきくときぞあきはかなしき","おくやまに"],
+[6,"かさ","かささぎのわたせるはしにおくしもの","しろきをみればよぞふけにける","かささぎの"],
+[7,"あまの","あまのはらふりさけみればかすがなる","みかさのやまにいでしつきかも","あまのはら"],
+[8,"わがい","わがいほはみやこのたつみしかぞすむ","よをうぢやまとひとはいふなり","わがいほは"],
+[9,"はなの","はなのいろはうつりにけりないたづらに","わがみよにふるながめせしまに","はなのいろは"],
+[10,"これ","これやこのゆくもかへるもわかれては","しるもしらぬもあふさかのせき","これやこの"],
+[11,"わたのはらや","わたのはらやそしまかけてこぎいでぬと","ひとにはつげよあまのつりぶね","わたのはらやそ"],
+[12,"あまつ","あまつかぜくものかよひぢふきとぢよ","をとめのすがたしばしとどめむ","あまつかぜ"],
+[13,"つく","つくばねのみねよりおつるみなのがは","こひぞつもりてふちとなりぬる","つくばねの"],
+[14,"みち","みちのくのしのぶもぢずりたれゆゑに","みだれそめにしわれならなくに","しのぶもぢずり"],
+[15,"きみがためは","きみがためはるののにいでてわかなつむ","わがころもでにゆきはふりつつ","きみがためはる"],
+[16,"たち","たちわかれいなばのやまのみねにおふる","まつとしきかばいまかへりこむ","たちわかれ"],
+[17,"ちは","ちはやぶるかみよもきかずたつたがは","からくれなゐにみづくくるとは","ちはやぶる"],
+[18,"す","すみのえのきしによるなみよるさへや","ゆめのかよひぢひとめよくらむ","すみのえの"],
+[19,"なにはが","なにはがたみじかきあしのふしのまも","あはでこのよをすぐしてよとや","なにはがた"],
+[20,"わび","わびぬればいまはたおなじなにはなる","みをつくしてもあはむとぞおもふ","わびぬれば"],
+[21,"いまこ","いまこむといひしばかりにながつきの","ありあけのつきをまちいでつるかな","いまこむと"],
+[22,"ふ","ふくからにあきのくさきのしをるれば","むべやまかぜをあらしといふらむ","ふくからに"],
+[23,"つき","つきみればちぢにものこそかなしけれ","わがみひとつのあきにはあらねど","つきみれば"],
+[24,"この","このたびはぬさもとりあへずたむけやま","もみぢのにしきかみのまにまに","このたびは"],
+[25,"なにし","なにしおはばあふさかやまのさねかづら","ひとにしられでくるよしもがな","なにしおはば"],
+[26,"おぐ","をぐらやまみねのもみぢばこころあらば","いまひとたびのみゆきまたなむ","をぐらやま"],
+[27,"みかの","みかのはらわきてながるるいづみがは","いつみきとてかこひしかるらむ","みかのはら"],
+[28,"やまざ","やまざとはふゆぞさびしさまさりける","ひとめもくさもかれぬとおもへば","やまざとは"],
+[29,"こころあ","こころあてにをらばやをらむはつしもの","おきまどはせるしらぎくのはな","こころあてに"],
+[30,"ありあ","ありあけのつれなくみえしわかれより","あかつきばかりうきものはなし","ありあけの"],
+[31,"あさぼらけあ","あさぼらけありあけのつきとみるまでに","よしののさとにふれるしらゆき","あさぼらけあり"],
+[32,"やまが","やまがはにかぜのかけたるしがらみは","ながれもあへぬもみぢなりけり","やまがはに"],
+[33,"ひさ","ひさかたのひかりのどけきはるのひに","しづこころなくはなのちるらむ","ひさかたの"],
+[34,"たれ","たれをかもしるひとにせむたかさごの","まつもむかしのともならなくに","たれをかも"],
+[35,"ひとは","ひとはいさこころもしらずふるさとは","はなぞむかしのかににほひける","ひとはいさ"],
+[36,"なつ","なつのよはまだよひながらあけぬるを","くものいづこにつきやどるらむ","なつのよは"],
+[37,"しら","しらつゆにかぜのふきしくあきののは","つらぬきとめぬたまぞちりける","しらつゆに"],
+[38,"わすら","わすらるるみをばおもはずちかひてし","ひとのいのちのをしくもあるかな","わすらるる"],
+[39,"あさじ","あさぢふのをののしのはらしのぶれど","あまりてなどかひとのこひしき","あさぢふの"],
+[40,"しの","しのぶれどいろにいでにけりわがこひは","ものやおもふとひとのとふまで","しのぶれど"],
+[41,"こい","こひすてふわがなはまだきたちにけり","ひとしれずこそおもひそめしか","こひすてふ"],
+[42,"ちぎりき","ちぎりきなかたみにそでをしぼりつつ","すゑのまつやまなみこさじとは","ちぎりきな"],
+[43,"あい","あひみてののちのこころにくらぶれば","むかしはものをおもはざりけり","あひみての"],
+[44,"おおこ","あふことのたえてしなくばなかなかに","ひとをもみをもうらみざらまし","あふことの"],
+[45,"あわれ","あはれともいふべきひとはおもほえで","みのいたづらになりぬべきかな","あはれとも"],
+[46,"ゆら","ゆらのとをわたるふなびとかぢをたえ","ゆくへもしらぬこひのみちかな","ゆらのとを"],
+[47,"やえ","やへむぐらしげれるやどのさびしきに","ひとこそみえねあきはきにけり","やへむぐら"],
+[48,"かぜを","かぜをいたみいはうつなみのおのれのみ","くだけてものをおもふころかな","かぜをいたみ"],
+[49,"みかき","みかきもりゑじのたくひのよるはもえ","ひるはきえつつものをこそおもへ","みかきもり"],
+[50,"きみがためお","きみがためをしからざりしいのちさへ","ながくもがなとおもひけるかな","きみがためをし"],
+[51,"かく","かくとだにえやはいぶきのさしもぐさ","さしもしらじなもゆるおもひを","かくとだに"],
+[52,"あけ","あけぬればくるるものとはしりながら","なほうらめしきあさぼらけかな","あけぬれば"],
+[53,"なげき","なげきつつひとりぬるよのあくるまは","いかにひさしきものとかはしる","なげきつつ"],
+[54,"わすれ","わすれじのゆくすゑまではかたければ","けふをかぎりのいのちともがな","わすれじの"],
+[55,"たき","たきのおとはたえてひさしくなりぬれど","なこそながれてなほきこえけれ","たきのおとは"],
+[56,"あらざ","あらざらむこのよのほかのおもひでに","いまひとたびのあふこともがな","あらざらむ"],
+[57,"め","めぐりあひてみしやそれともわかぬまに","くもがくれにしよはのつきかな","めぐりあひて"],
+[58,"ありま","ありまやまゐなのささはらかぜふけば","いでそよひとをわすれやはする","ありまやま"],
+[59,"やす","やすらはでねなましものをさよふけて","かたぶくまでのつきをみしかな","やすらはで"],
+[60,"おおえ","おほえやまいくののみちのとほければ","まだふみもみずあまのはしだて","おほえやま"],
+[61,"いに","いにしへのならのみやこのやへざくら","けふここのへににほひぬるかな","いにしへの"],
+[62,"よを","よをこめてとりのそらねははかるとも","よにあふさかのせきはゆるさじ","よをこめて"],
+[63,"いまは","いまはただおもひたえなむとばかりを","ひとづてならでいふよしもがな","いまはただ"],
+[64,"あさぼらけう","あさぼらけうぢのかはぎりたえだえに","あらはれわたるせぜのあじろぎ","あさぼらけうぢ"],
+[65,"うら","うらみわびほさぬそでだにあるものを","こひにくちなむなこそをしけれ","うらみわび"],
+[66,"もろ","もろともにあはれとおもへやまざくら","はなよりほかにしるひともなし","もろともに"],
+[67,"はるの","はるのよのゆめばかりなるたまくらに","かひなくたたむなこそをしけれ","はるのよの"],
+[68,"こころに","こころにもあらでうきよにながらへば","こひしかるべきよはのつきかな","こころにも"],
+[69,"あらし","あらしふくみむろのやまのもみぢばは","たつたのかはのにしきなりけり","あらしふく"],
+[70,"さ","さびしさにやどをたちいでてながむれば","いづこもおなじあきのゆふぐれ","さびしさに"],
+[71,"ゆう","ゆふさればかどたのいなばおとづれて","あしのまろやにあきかぜぞふく","ゆふされば"],
+[72,"おと","おとにきくたかしのはまのあだなみは","かけじやそでのぬれもこそすれ","おとにきく"],
+[73,"たか","たかさごのおのへのさくらさきにけり","とやまのかすみたたずもあらなむ","たかさごの"],
+[74,"うか","うかりけるひとをはつせのやまおろし","はげしかれとはいのらぬものを","うかりける"],
+[75,"ちぎりお","ちぎりおきしさせもがつゆをいのちにて","あはれことしのあきもいぬめり","ちぎりおきし"],
+[76,"わたのはらこ","わたのはらこぎいでてみればひさかたの","くもゐにまがふおきつしらなみ","わたのはらこぎ"],
+[77,"せ","せをはやみいはにせかるるたきがはの","われてもすゑにあはむとぞおもふ","せをはやみ"],
+[78,"あわじ","あはぢしまかよふちどりのなくこゑに","いくよねざめぬすまのせきもり","あはぢしま"],
+[79,"あきか","あきかぜにたなびくくものたえまより","もれいづるつきのかげのさやけさ","あきかぜに"],
+[80,"ながか","ながからむこころもしらずくろかみの","みだれてけさはものをこそおもへ","ながからむ"],
+[81,"ほ","ほととぎすなきつるかたをながむれば","ただありあけのつきぞのこれる","ほととぎす"],
+[82,"おも","おもひわびさてもいのちはあるものを","うきにたへぬはなみだなりけり","おもひわび"],
+[83,"よのなかよ","よのなかよみちこそなけれおもひいる","やまのおくにもしかぞなくなる","よのなかよ"],
+[84,"ながら","ながらへばまたこのごろやしのばれむ","うしとみしよぞいまはこひしき","ながらへば"],
+[85,"よも","よもすがらものおもふころはあけやらで","ねやのひまさへつれなかりけり","よもすがら"],
+[86,"なげけ","なげけとてつきやはものをおもはする","かこちがほなるわがなみだかな","なげけとて"],
+[87,"む","むらさめのつゆもまだひぬまきのはに","きりたちのぼるあきのゆふぐれ","むらさめの"],
+[88,"なにはえ","なにはえのあしのかりねのひとよゆゑ","みをつくしてやこひわたるべき","なにはえの"],
+[89,"たま","たまのをよたえなばたえねながらへば","しのぶることのよわりもぞする","たまのをよ"],
+[90,"みせ","みせばやなおじまのあまのそでだにも","ぬれにぞぬれしいろはかはらず","みせばやな"],
+[91,"きり","きりぎりすなくやしもよのさむしろに","ころもかたしきひとりかもねむ","きりぎりす"],
+[92,"わがそ","わがそではしほひにみえぬおきのいしの","ひとこそしらねかわくまもなし","わがそでは"],
+[93,"よのなかは","よのなかはつねにもがもななぎさこぐ","あまのをぶねのつなでかなしも","よのなかは"],
+[94,"みよ","みよしののやまのあきかぜさよふけて","ふるさとさむくころもうつなり","みよしのの"],
+[95,"おおけ","おほけなくうきよのたみにおほふかな","わがたつそまにすみぞめのそで","おほけなく"],
+[96,"はなさ","はなさそふあらしのにはのゆきならで","ふりゆくものはわがみなりけり","はなさそふ"],
+[97,"こぬ","こぬひとをまつほのうらのゆふなぎに","やくやもしほのみもこがれつつ","こぬひとを"],
+[98,"かぜそ","かぜそよぐならのをがはのゆふぐれは","みそぎぞなつのしるしなりける","かぜそよぐ"],
+[99,"ひとも","ひともをしひともうらめしあぢきなく","よをおもふゆゑにものおもふみは","ひともをし"],
+[100,"もも","ももしきやふるきのきばのしのぶにも","なほあまりあるむかしなりけり","ももしきや"]
+];
+const kimarijiOrder = "む す め ふ さ ほ せ|うか うら つき つく しら しの もろ もも ゆら ゆう|いに いまは いまこ ちぎりき ちぎりお ちは きみがためは きみがためお きり|はなさ はなの はるの はるす やす やえ やまが やまざ よのなかよ よのなかは よも よを かく かさ かぜを かぜそ|みち みよ みせ みかき みかの|たま たき たご たれ たち この これ こい こぬ こころに こころあ|おく おぐ おと おも おおけ おおこ おおえ わび わすれ わすら わがい わがそ わたのはらや わたのはらこ|なつ なげけ なげき ながら ながか なにし なにはえ なにはが|あし あけ あい ありま ありあ あきか あきの あわじ あわれ あらし あらざ あさじ あさぼらけあ あさぼらけう あまつ あまの".split(/[ |]/).filter(Boolean);
+const bookTab=document.getElementById('bookTab'), gameTab=document.getElementById('gameTab'), bookSection=document.getElementById('bookSection'), gameSection=document.getElementById('gameSection');
+let flipped=new Set(), order='normal', display='flip', deck=[], index=0, previous=null, running=false, startAt=0, elapsedBefore=0, timerInterval=null;
+const $=id=>document.getElementById(id);
+function setSection(which){const isBook=which==='book';bookSection.classList.toggle('hidden',!isBook);gameSection.classList.toggle('hidden',isBook);bookTab.style.background=isBook?'#e7e4da':'white';gameTab.style.background=!isBook?'#e7e4da':'white';}
+bookTab.addEventListener('click',()=>setSection('book'));gameTab.addEventListener('click',()=>setSection('game'));
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderBooks(){
+ order=$('order').value;display=$('display').value;
+ let list=[...poems];
+ if(order==='normal')list.sort((a,b)=>a[0]-b[0]);
+ else list.sort((a,b)=>kimarijiOrder.indexOf(a[1])-kimarijiOrder.indexOf(b[1]));
+ $('bookCount').textContent=`${list.length}首`;
+ $('poemList').innerHTML=list.map(p=>{
+  const open=display==='all'||flipped.has(p[0]);
+  const upper=`<strong>${esc(p[4])}</strong>${esc(p[2].slice(p[4].length))}`;
+  return `<article class="poem" data-num="${p[0]}"><div class="poemhead"><span>${p[0]}番　決まり字：${esc(p[1])}</span><span>${display==='all'?'全表示':open?'上の句':'下の句'}</span></div>${open?`<div class="verse">${upper}</div><div class="verse lower">${esc(p[3])}</div>`:`<div class="verse">${esc(p[3])}</div>`}</article>`;
+ }).join('');
+ if(display==='flip')document.querySelectorAll('.poem').forEach(el=>el.addEventListener('click',()=>{let n=Number(el.dataset.num);flipped.has(n)?flipped.delete(n):flipped.add(n);renderBooks();}));
+}
+$('order').addEventListener('change',renderBooks);$('display').addEventListener('change',renderBooks);
+function shuffle(arr){let a=[...arr];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function renderGame(){
+ if(!deck.length)return;
+ const p=deck[index];
+ $('question').textContent=p[3];
+ $('previousAnswer').textContent=previous?previous[1]:'';
+ $('progress').textContent=`問題 ${index+1} / ${deck.length}`;
+}
+function newDeck(){deck=shuffle(poems);index=0;previous=null;renderGame();}
+$('nextBtn').addEventListener('click',()=>{if(!deck.length)newDeck();previous=deck[index];index++;if(index>=deck.length){deck=shuffle(poems);index=0;}renderGame();});
+$('restartBtn').addEventListener('click',()=>{newDeck();});
+function formatTime(ms){let t=ms/1000;let m=Math.floor(t/60),s=Math.floor(t%60),d=Math.floor((t*10)%10);return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${d}`;}
+function tick(){let ms=elapsedBefore+(running?Date.now()-startAt:0);$('timer').textContent=formatTime(ms);}
+$('startBtn').addEventListener('click',()=>{if(running)return;running=true;startAt=Date.now();$('gameStatus').textContent='計測中';$('startBtn').textContent='計測中…';timerInterval=setInterval(tick,100);});
+$('stopBtn').addEventListener('click',()=>{if(running){elapsedBefore+=Date.now()-startAt;running=false;clearInterval(timerInterval);timerInterval=null;$('gameStatus').textContent='終了';$('startBtn').textContent='再開';tick();}else if(elapsedBefore>0){elapsedBefore=0;$('timer').textContent='00:00.0';$('gameStatus').textContent='待機中';$('startBtn').textContent='計測スタート';}});
+renderBooks();newDeck();setSection('book');
+</script>
+</body></html>
